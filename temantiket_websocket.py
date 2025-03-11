@@ -1,11 +1,13 @@
 import asyncio
+import os
 
 import websockets
+from dotenv import load_dotenv
 
 from temantiket_assistant import stream_graph_updates
 from whatsapp import get_message, send_message
 
-WEBSOCKET_URI = "ws://localhost:3000/ws?session=default&events=message"
+load_dotenv()
 
 
 class WebSocketClient:
@@ -16,7 +18,7 @@ class WebSocketClient:
     async def connect(self):
         while True:
             try:
-                async with websockets.connect(WEBSOCKET_URI) as websocket:
+                async with websockets.connect(os.environ.get("WEBSOCKET_URI")) as websocket:
                     self.websocket = websocket
                     self.running = True
                     print("Connected to WebSocket server")
@@ -30,9 +32,8 @@ class WebSocketClient:
         try:
             while self.running:
                 message = await self.websocket.recv()
-                chat_id, chat_body, session_id = await get_message(message)
-                assistant = stream_graph_updates(chat_body, session_id)
-                # processed_msg = await self.agent.process_message(session_id, messages=chat_body)
+                chat_id, chat_body = await get_message(message)
+                assistant = stream_graph_updates(chat_body, chat_id)
                 await send_message(chat_id, assistant)
 
 
